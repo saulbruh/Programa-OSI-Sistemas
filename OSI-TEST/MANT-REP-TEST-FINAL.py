@@ -26,23 +26,19 @@ from tkinter import messagebox, filedialog
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
-# ------------------------------- Rutas --------------------------------
+# ------------------------------- Rutas globales --------------------------------
 
-# Modo PORTABLE: todos los datos viven junto al ejecutable, en ./data/
+APP_NAME = "OSI_Arecibo"
 
-def app_base_dir() -> str:
-    if getattr(sys, 'frozen', False):  # PyInstaller
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
+PROGRAM_DATA = os.getenv("PROGRAMDATA")  # C:\ProgramData
+DATA_DIR = os.path.join(PROGRAM_DATA, APP_NAME)
 
-BASE_DIR = app_base_dir()
-DATA_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
-PATH_INV  = os.path.join(DATA_DIR, "Registro Laptops.xlsx")
-PATH_MANT = os.path.join(DATA_DIR, "Registro_Mantenimiento_Reparacion_Laptop.xlsx")
-PATH_PREST= os.path.join(DATA_DIR, "Registro_Prestamos_Laptop.xlsx")
-PATH_DEC  = os.path.join(DATA_DIR, "Registro_Decomisados.xlsx")
+PATH_INV   = os.path.join(DATA_DIR, "Registro Laptops.xlsx")
+PATH_MANT  = os.path.join(DATA_DIR, "Registro_Mantenimiento_Reparacion_Laptop.xlsx")
+PATH_PREST = os.path.join(DATA_DIR, "Registro_Prestamos_Laptop.xlsx")
+PATH_DEC   = os.path.join(DATA_DIR, "Registro_Decomisados.xlsx")
 
 # Encabezados exactos (NO cambiar)
 INV_COLS  = [

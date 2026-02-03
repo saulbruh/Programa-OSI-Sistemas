@@ -9,7 +9,7 @@ REM ====================================================
 SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 
 REM === CONFIG: carpeta del proyecto ===
-cd /d "C:\Users\tecnico01\Desktop\OSI-TEST"
+cd /d "%~dp0"
 
 REM === Crear venv si no existe ===
 if not exist ".venv\" (
@@ -29,6 +29,8 @@ REM === MODO COMPILACION (opcional) ===
 REM Usa:   "Mantenimiento y Reparacion OSI.bat build"  para compilar el .exe
 if /I "%~1"=="build" goto BUILD
 if /I "%~1"=="/build" goto BUILD
+if /I "%~1"=="install" goto INSTALL
+if /I "%~1"=="/install" goto INSTALL
 
 REM === MODO EJECUCION (por defecto) ===
 echo [RUN] Iniciando OSI Arecibo en Python...
@@ -40,8 +42,8 @@ GOTO END
 
 :BUILD
 REM ----------------------------------------------------
-REM  Compila ejecutable Windows (dist\OSI_Arecibo.exe)
-REM  y crea carpeta PORTABLE con ./data y recursos
+REM  Compila ejecutable Windows institucional
+REM  (Program Files + ProgramData + Public Desktop)
 REM ----------------------------------------------------
 set ICON_FLAG=
 if exist "icon.ico" set ICON_FLAG=--icon icon.ico
@@ -53,6 +55,10 @@ if exist OSI_Arecibo.spec del /f /q OSI_Arecibo.spec
 
 pyinstaller --onefile --noconsole --name "OSI_Arecibo" %ICON_FLAG% MANT-REP-TEST-FINAL.py
 
+echo.
+echo [INFO] Ejecuta el script con el parámetro INSTALL para instalar el sistema:
+echo        MantenimientoReparacionOSI.bat install
+
 if not exist "dist\OSI_Arecibo.exe" (
     echo [ERROR] No se encontró dist\OSI_Arecibo.exe. Revisa la salida de PyInstaller.
     echo.
@@ -60,37 +66,53 @@ if not exist "dist\OSI_Arecibo.exe" (
     goto END
 )
 
-REM === Armar paquete portable ===
-set PKG=OSI_Arecibo_Portable
-if exist "%PKG%" rmdir /s /q "%PKG%"
-mkdir "%PKG%\data"
+:INSTALL
+REM ----------------------------------------------------
+REM  Instalación institucional
+REM ----------------------------------------------------
 
-copy /y "dist\OSI_Arecibo.exe" "%PKG%\OSI_Arecibo.exe" >nul
-if exist icon.ico copy /y icon.ico "%PKG%\icon.ico" >nul
+set APP_NAME=OSI_Arecibo
+set EXE_NAME=OSI_Arecibo.exe
 
-REM Copiar datos si están junto al proyecto o en el Desktop del usuario
-for %%F in ("Registro Laptops.xlsx" "Registro_Mantenimiento_Reparacion_Laptop.xlsx" "Registro_Prestamos_Laptop.xlsx" "Registro_Decomisados.xlsx") do (
-    if exist ".\data\%%~F" copy /y ".\data\%%~F" "%PKG%\data\%%~F" >nul
-    if not exist "%PKG%\data\%%~F" if exist "%USERPROFILE%\Desktop\%%~F" copy /y "%USERPROFILE%\Desktop\%%~F" "%PKG%\data\%%~F" >nul
+set INSTALL_DIR=C:\Program Files\%APP_NAME%
+set DATA_DIR=C:\ProgramData\%APP_NAME%
+set PUBLIC_DESKTOP=C:\Users\Public\Desktop
+
+echo [INSTALL] Verificando permisos de administrador...
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Este script debe ejecutarse como ADMINISTRADOR.
+    pause
+    goto END
 )
 
-REM Archivo README rápido
-(
-  echo OSI Arecibo — Paquete Portable
-  echo.
-  echo Estructura:
-  echo   OSI_Arecibo_Portable\OSI_Arecibo.exe
-  echo   OSI_Arecibo_Portable\data\*.xlsx
-  echo.
-  echo Puedes mover esta carpeta a cualquier lugar. El .exe usa rutas relativas a .\data
-  echo para leer y escribir los Excel.
-) > "%PKG%\LEEME.txt"
+echo [INSTALL] Creando carpetas...
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+if not exist "%DATA_DIR%" mkdir "%DATA_DIR%"
+
+echo [INSTALL] Copiando ejecutable...
+if not exist "dist\%EXE_NAME%" (
+    echo [ERROR] No se encontró dist\%EXE_NAME%. Ejecuta primero el modo BUILD.
+    pause
+    goto END
+)
+copy /y "dist\%EXE_NAME%" "%INSTALL_DIR%\%EXE_NAME%" >nul
+
+echo [INSTALL] Creando acceso directo en Public Desktop...
+powershell -NoProfile -Command ^
+  "$s=(New-Object -COM WScript.Shell).CreateShortcut('%PUBLIC_DESKTOP%\\%APP_NAME%.lnk');" ^
+  "$s.TargetPath='%INSTALL_DIR%\\%EXE_NAME%';" ^
+  "$s.WorkingDirectory='%INSTALL_DIR%';" ^
+  "$s.IconLocation='%INSTALL_DIR%\\%EXE_NAME%,0';" ^
+  "$s.Save()"
 
 echo.
-echo [BUILD] Paquete portable creado: "%CD%\%PKG%\"
-choice /c SN /n /m "¿Abrir carpeta portable ahora? (S/N) > "
-if errorlevel 2 goto END
-start "" explorer.exe "%CD%\%PKG%\"
+echo [OK] OSI Arecibo instalado correctamente.
+echo      Programa: %INSTALL_DIR%
+echo      Datos:     %DATA_DIR%
+echo      Acceso:    Public Desktop
+pause
+goto END
 
 :END
 ENDLOCAL
